@@ -74,21 +74,19 @@ enum WidgetRefreshInterval: Int, CaseIterable {
     }
 }
 
-/// Protocol to abstract storage for cross-device sync (iCloud on device, shared file in simulator)
+/// Protocol to abstract the secondary settings store (no-op on device, shared file in simulator)
 private protocol SyncStore {
     func string(forKey key: String) -> String?
     func setString(_ value: String, forKey key: String)
     func performSync()
 }
 
-extension NSUbiquitousKeyValueStore: SyncStore {
-    func setString(_ value: String, forKey key: String) {
-        set(value as Any, forKey: key)
-    }
-
-    func performSync() {
-        synchronize()
-    }
+/// Device store now that iCloud is gone: nothing syncs across devices, and
+/// App Group UserDefaults (read first in `init`) already holds every value.
+private struct LocalOnlySyncStore: SyncStore {
+    func string(forKey _: String) -> String? { nil }
+    func setString(_: String, forKey _: String) {}
+    func performSync() {}
 }
 
 /// Shared UserDefaults-based sync store for simulator (uses /tmp/BetterBlue_Shared)
@@ -269,20 +267,15 @@ class AppSettings {
             syncStore = SimulatorSyncStore()
         #else
             isSimulator = false
-            syncStore = NSUbiquitousKeyValueStore.default
+            // No iCloud key-value store: its entitlement cannot be signed by a
+            // Personal Team. App Group UserDefaults is the settings store.
+            syncStore = LocalOnlySyncStore()
         #endif
 
-        // Read App Group UserDefaults FIRST, iCloud second. The
-        // widget extension is a separate process from the main app,
-        // and `NSUbiquitousKeyValueStore` keeps its own per-process
-        // local cache that lags behind the main app's writes until
-        // iCloud delivers a change notification. App Group
-        // UserDefaults, by contrast, is shared synchronously across
-        // processes on the same device — writes from the main app
-        // are immediately visible to the widget. iCloud remains the
-        // cross-device source (picked up below in `handleiCloudChange`),
-        // but UserDefaults is the source of truth for "what this
-        // device's main app last saved."
+        // Read App Group UserDefaults first: it is shared synchronously
+        // across processes, so the main app's writes are immediately
+        // visible to the widget. The sync store is only a fallback (and
+        // a no-op on device).
         let savedDistanceUnit = userDefaults.string(forKey: distanceUnitKey)
             ?? syncStore.string(forKey: distanceUnitKey)
             ?? Distance.Units.miles.rawValue
@@ -314,54 +307,7 @@ class AppSettings {
             debugModeEnabled = userDefaults.bool(forKey: debugModeEnabledKey)
         }
 
-        // Start sync store and listen for changes from other devices
         syncStore.performSync()
-
-        #if !targetEnvironment(simulator)
-            // Only set up iCloud observer on real devices
-            NotificationCenter.default.addObserver(
-                forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-                object: NSUbiquitousKeyValueStore.default,
-                queue: .main
-            ) { [weak self] notification in
-                // Extract values from notification before async boundary
-                guard let self,
-                      let userInfo = notification.userInfo,
-                      let changeReason = userInfo[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int,
-                      let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] else {
-                    return
-                }
-                Task { @MainActor [self] in
-                    self.handleiCloudChange(changeReason: changeReason, changedKeys: changedKeys)
-                }
-            }
-        #endif
-    }
-
-    private func handleiCloudChange(changeReason: Int, changedKeys: [String]) {
-        BBLogger.info(.app, "iCloud settings changed externally (reason: \(changeReason)): \(changedKeys)")
-
-        // Update stored properties from iCloud values. The didSet
-        // observers on `preferredDistanceUnit` /
-        // `preferredTemperatureUnit` will re-write to App Group
-        // UserDefaults as a side effect — ensuring the local
-        // widget extension picks up cross-device changes too. If
-        // we updated only the in-memory value, the widget process
-        // would still read the old UserDefaults value on its next
-        // timeline reload.
-        if changedKeys.contains(distanceUnitKey),
-           let value = syncStore.string(forKey: distanceUnitKey),
-           let unit = Distance.Units(rawValue: value),
-           unit != preferredDistanceUnit {
-            preferredDistanceUnit = unit
-        }
-
-        if changedKeys.contains(temperatureUnitKey),
-           let value = syncStore.string(forKey: temperatureUnitKey),
-           let unit = Temperature.Units(rawValue: value),
-           unit != preferredTemperatureUnit {
-            preferredTemperatureUnit = unit
-        }
     }
 
     private func requestNotificationPermission() async {

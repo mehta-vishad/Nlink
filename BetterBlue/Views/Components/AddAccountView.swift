@@ -320,7 +320,7 @@ struct AddAccountView: View {
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("BetterBlue requires an active Hyundai BlueLink or Kia Connect subscription.")
-                    Text("BetterBlue stores your credentials securely on your device and in iCloud.")
+                    Text("BetterBlue stores your credentials on this device only.")
 
                     let link = "[GitHub](https://github.com/schmidtwmark/BetterBlue)"
                     if let openSourceString = try? AttributedString(
