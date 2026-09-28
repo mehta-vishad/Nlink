@@ -104,10 +104,11 @@ Storage is **local-only** — there is no CloudKit sync:
   `group.com.betterblue.shared`; per-machine overrides in gitignored `Config/Local.xcconfig`).
   Never hardcode this string in source — use `AppIdentifiers`.
 
-The App Group fallback is deliberate. Whether a Personal Team can sign an App Group
-entitlement is Gate G1 in the work order: if it signs, app and widget share one store;
-if not, the widget logs in and caches on its own and the fallback path takes over with
-no code change.
+**Gate G1 passed (2026-09-28):** the App Group entitlement signs on the Personal Team,
+and on device the store lives in the App Group container (verified: no fallback store in
+the app's own Application Support). App and widget share one store. The per-process
+fallback remains only as a safety net; if it were ever needed for real, the widget would
+also need its own credentials (`Config/Secrets.example.swift`) — that part is not built.
 
 ### API Client Architecture
 

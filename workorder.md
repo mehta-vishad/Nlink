@@ -4,7 +4,7 @@
 **Approach:** Fork of [BetterBlue](https://github.com/schmidtwmark/BetterBlue) (MIT) + [BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) (MIT)
 **Target platform:** iOS 27 (iOS 17+ APIs), Xcode 27
 **Signing:** Free Apple Developer Personal Team, with a decision gate to upgrade to paid
-**Status:** Phase 1 code complete — next step is signing in to Xcode and running on the phone (Gate G1)
+**Status:** Phase 1 — app signs and runs on the iPhone; Gate G1 passed. Remaining: Fake Vehicle Mode + widget check on device
 **Last updated:** 2026-09-28
 **Repo:** `git@github.com:mehta-vishad/Nlink.git` (public)
 
@@ -113,6 +113,11 @@ Attempt to build with the existing App Group entitlement intact.
 
 Record which branch was taken. Phases 6 and 7 depend on it.
 
+> **Result (2026-09-28): signs — shared-container branch.** The app installed and ran on the
+> iPhone with the App Group entitlement intact (`group.com.mehtavishad.enlink`). On device the
+> App Group container exists and the app did *not* create a fallback store in its own
+> Application Support, so app and widget share one SwiftData store. No `Secrets.swift` needed.
+
 **Tasks — credential hygiene**
 
 - [x] Add `Secrets.swift` (or equivalent) to `.gitignore` **before the first commit**
@@ -123,7 +128,7 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 
 | Test | Method | Pass condition |
 |---|---|---|
-| Signing works with reduced target set | Build and run on device | App installs, launches |
+| Signing works with reduced target set | Build and run on device | App installs, launches — **passed 2026-09-28** |
 | No push/iCloud entitlement leaks | `codesign -d --entitlements - <app>.app` | Neither key present |
 | Fake Vehicle Mode renders | Enable in-app, open vehicle view | A synthetic vehicle displays with status |
 | Widget target installs | Add stock BetterBlue widget to home screen | Widget appears, shows fake vehicle |

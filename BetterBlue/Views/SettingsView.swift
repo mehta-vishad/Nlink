@@ -135,7 +135,7 @@ struct SettingsView: View {
                             HTTPLogView()
                         }
 
-                        NavigationLink("Sync Diagnostics") {
+                        NavigationLink("Diagnostics") {
                             DiagnosticInfoView()
                         }
 
