@@ -4,7 +4,7 @@
 **Approach:** Fork of [BetterBlue](https://github.com/schmidtwmark/BetterBlue) (MIT) + [BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) (MIT)
 **Target platform:** iOS 27 (iOS 17+ APIs), Xcode 27
 **Signing:** Free Apple Developer Personal Team, with a decision gate to upgrade to paid
-**Status:** Phase 1 — app signs and runs on the iPhone; Gate G1 passed. Remaining: Fake Vehicle Mode + widget check on device
+**Status:** Phase 1 complete. Phase 2 ready — waiting on the first real-account session at the car
 **Last updated:** 2026-09-28
 **Repo:** `git@github.com:mehta-vishad/Nlink.git` (public)
 
@@ -129,10 +129,10 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 | Test | Method | Pass condition |
 |---|---|---|
 | Signing works with reduced target set | Build and run on device | App installs, launches — **passed 2026-09-28** |
-| No push/iCloud entitlement leaks | `codesign -d --entitlements - <app>.app` | Neither key present |
-| Fake Vehicle Mode renders | Enable in-app, open vehicle view | A synthetic vehicle displays with status |
-| Widget target installs | Add stock BetterBlue widget to home screen | Widget appears, shows fake vehicle |
-| App ID budget not blown | Count registered identifiers at developer.apple.com | 2 or 3 bundle IDs, not 5+ |
+| No push/iCloud entitlement leaks | `codesign -d --entitlements - <app>.app` | Neither key present — **passed**: app and widget carry only `application-groups` |
+| Fake Vehicle Mode renders | Enable in-app, open vehicle view | A synthetic vehicle displays with status — **passed on device** (add a car under *Fake Vehicles* first) |
+| Widget target installs | Add stock BetterBlue widget to home screen | Widget appears, shows fake vehicle — **passed on device** |
+| App ID budget not blown | Count registered identifiers at developer.apple.com | 2 or 3 bundle IDs, not 5+ — **passed**: 2 (`com.mehtavishad.BetterBlue`, `.Widget`) |
 
 **Exit criteria**
 
@@ -141,11 +141,26 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 - Zero real credentials in the working tree or git history
 - Gate G1 resolved and documented
 
+> **Phase 1 complete (2026-09-28).** All exit criteria met and verified on the iPhone.
+
 ---
 
 ### Phase 2 — Live vehicle connection
 
 **Objective:** Real commands reaching the real car through your own build.
+
+> **Method (added 2026-09-28).** Every HTTP log — already redacted by BetterBlueKit (no
+> password, PIN, tokens, GPS, or full VIN) — is also written as JSON lines to
+> `Library/Logs/http-*.jsonl` in the App Group container. `./scripts/pull-phone-logs.sh`
+> copies those files off the phone into gitignored `.phone-logs/`. That replaces copying
+> from Settings → HTTP Logs and the stopwatch: fixtures and latency come from the pulled
+> logs. The SwiftData store is never pulled — it holds the password and PIN in plain text.
+>
+> The Gen5W-vs-CCNC question in the risk note below can be read from `vehicleGeneration`
+> in the vehicle-list response, before any climate command is tried.
+>
+> Hyundai counts wrong PINs ("Invalid PIN, N attempts remaining"). Run the PIN-failure
+> test once, not repeatedly — exhausting the attempts locks the PIN until it is reset.
 
 **Tasks**
 

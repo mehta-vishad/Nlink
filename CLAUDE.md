@@ -161,6 +161,11 @@ Testing without real vehicles is supported via `Brand.fake`:
 - Must be configured with `createSharedModelContainer()` and device type
 - Creates `HTTPLogSink` instances for API clients to inject logs
 - Logs viewable in Settings > HTTP Logs
+- `HTTPLogMirror` also appends each (already redacted) log as a JSON line to
+  `Library/Logs/http-<source>.jsonl` in the App Group container, one file per process,
+  rotated at 5 MB. `./scripts/pull-phone-logs.sh` copies those files off a connected
+  iPhone into gitignored `.phone-logs/` and prints a summary. Never pull the SwiftData
+  store itself: `ZBBACCOUNT` holds the Bluelink password and PIN in plain text.
 
 ### Distance & Temperature Units
 `AppSettings` manages user preferences (stored in UserDefaults):
