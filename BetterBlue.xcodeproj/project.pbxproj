@@ -81,6 +81,7 @@
 				Utility/Date.swift,
 				Utility/DiagnosticInfo.swift,
 				Utility/FakeSurroundView.swift,
+				Utility/HTTPLogMirror.swift,
 				Utility/HTTPLogSinkManager.swift,
 				Utility/SurroundViewRendering.swift,
 				Utility/SwiftDataFakeVehicleProvider.swift,

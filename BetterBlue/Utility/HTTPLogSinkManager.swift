@@ -44,6 +44,8 @@ class HTTPLogSinkManager {
                 let debugModeEnabled = await AppSettings.shared.debugModeEnabled
                 guard debugModeEnabled else { return }
 
+                HTTPLogMirror.record(httpLog, from: deviceType)
+
                 do {
                     // Create a background context to avoid blocking the main thread
                     let context = ModelContext(modelContainer)

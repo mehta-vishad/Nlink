@@ -82,3 +82,7 @@ UserDefaults.plist
 Secrets.swift
 **/Secrets.swift
 *.secrets.swift
+
+# Logs pulled off the iPhone by scripts/pull-phone-logs.sh (redacted, but still
+# the car's real status data — keep out of this public repo).
+.phone-logs/
