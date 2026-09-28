@@ -53,8 +53,7 @@ struct DebugExportData {
                 preferredTemperatureUnit: appSettings.preferredTemperatureUnit.rawValue,
                 notificationsEnabled: appSettings.notificationsEnabled,
                 widgetRefreshInterval: appSettings.widgetRefreshInterval.rawValue,
-                debugModeEnabled: appSettings.debugModeEnabled,
-                liveActivitiesEnabled: appSettings.liveActivitiesEnabled
+                debugModeEnabled: appSettings.debugModeEnabled
             ),
             accounts: accountExports,
             currentError: currentError.map(ErrorExport.init(from:))
@@ -226,7 +225,6 @@ struct DebugExportContent: Encodable {
         let notificationsEnabled: Bool
         let widgetRefreshInterval: Int
         let debugModeEnabled: Bool
-        let liveActivitiesEnabled: Bool
     }
 }
 

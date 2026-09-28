@@ -5,124 +5,12 @@
 //  Created by Mark Schmidt on 8/29/25.
 //
 
-#if canImport(ActivityKit)
-import ActivityKit
-#endif
 import AppIntents
 import BetterBlueKit
 import SwiftData
 import UniformTypeIdentifiers
 import UserNotifications
 import WidgetKit
-
-// MARK: - AppEnum Conformance for LiveActivityType
-
-extension LiveActivityType: AppEnum {
-    public static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        TypeDisplayRepresentation(name: "Activity Type")
-    }
-
-    public static var caseDisplayRepresentations: [LiveActivityType: DisplayRepresentation] {
-        [
-            .climate: DisplayRepresentation(title: "Climate"),
-            .charging: DisplayRepresentation(title: "Charging"),
-            .none: DisplayRepresentation(title: "None")
-        ]
-    }
-
-    public static var allCases: [LiveActivityType] {
-        [.climate, .charging, .none]
-    }
-}
-
-// MARK: - Live Activity Intents
-
-struct StopLiveActivityIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "Stop Live Activity"
-    static let description = IntentDescription("Stop the current activity (climate or charging)")
-
-    @Parameter(title: "VIN")
-    var vin: String
-
-    @Parameter(title: "Activity Type")
-    var activityType: LiveActivityType
-
-    init() {
-        vin = ""
-        activityType = .none
-    }
-
-    init(vin: String, activityType: LiveActivityType) {
-        self.vin = vin
-        self.activityType = activityType
-    }
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        #if canImport(ActivityKit)
-        BBLogger.info(.intent, "StopLiveActivityIntent: Starting for VIN: \(vin), type: \(activityType)")
-
-        // Find the existing activity
-        let activities = Activity<VehicleActivityAttributes>.activities
-        guard let existingActivity = activities.first(where: { $0.attributes.vin == vin }) else {
-            BBLogger.error(.intent, "StopLiveActivityIntent: No activity found for VIN: \(vin)")
-            return .result()
-        }
-
-        // Fetch the vehicle and account
-        let modelContainer = try createSharedModelContainer(enableCloudKit: false)
-        let context = ModelContext(modelContainer)
-        let vehicles = try context.fetch(FetchDescriptor<BBVehicle>())
-
-        guard let bbVehicle = vehicles.first(where: { $0.vin == vin }),
-              let account = bbVehicle.account
-        else {
-            BBLogger.error(.intent, "StopLiveActivityIntent: Vehicle or account not found for VIN: \(vin)")
-            return .result()
-        }
-
-        // Send the appropriate stop command
-        do {
-            switch activityType {
-            case .climate:
-                BBLogger.info(.intent, "StopLiveActivityIntent: Stopping climate...")
-                try await account.stopClimate(bbVehicle, modelContext: context)
-            case .charging:
-                BBLogger.info(.intent, "StopLiveActivityIntent: Stopping charge...")
-                try await account.stopCharge(bbVehicle, modelContext: context)
-            case .debug:
-                BBLogger.info(.intent, "StopLiveActivityIntent: Stopping debug activity...")
-                bbVehicle.debugLiveActivity = false
-                try context.save()
-            case .none:
-                BBLogger.warning(.intent, "StopLiveActivityIntent: Activity type is .none, nothing to stop")
-            }
-
-            // End the Live Activity
-            nonisolated(unsafe) let activity = existingActivity
-            await activity.end(nil, dismissalPolicy: .immediate)
-            BBLogger.info(.intent, "StopLiveActivityIntent: Activity ended successfully")
-
-            // Send notification
-            let actionName: String
-            switch activityType {
-            case .climate: actionName = "Climate"
-            case .charging: actionName = "Charging"
-            case .debug: actionName = "Debug"
-            case .none: actionName = "Activity"
-            }
-            await sendNotification(title: "\(actionName) Stop Sent", body: "Command sent to \(bbVehicle.displayName)")
-
-        } catch {
-            BBLogger.error(.intent, "StopLiveActivityIntent: Error: \(error)")
-        }
-
-        return .result()
-        #else
-        return .result()
-        #endif
-    }
-}
 
 struct RefreshVehicleStatusIntent: AppIntent {
     static let title: LocalizedStringResource = "Refresh Vehicle Status"
@@ -134,7 +22,7 @@ struct RefreshVehicleStatusIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<VehicleEntity> & ProvidesDialog {
-        let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+        let modelContainer = try createSharedModelContainer()
         let context = ModelContext(modelContainer)
 
         let vehicles = try context.fetch(FetchDescriptor<BBVehicle>())
@@ -184,7 +72,7 @@ struct GetVehicleStatusIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<VehicleEntity> & ProvidesDialog {
-        let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+        let modelContainer = try createSharedModelContainer()
         let context = ModelContext(modelContainer)
 
         let vehicles = try context.fetch(FetchDescriptor<BBVehicle>())
@@ -293,7 +181,7 @@ struct IsVehiclePluggedInIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
-        let context = ModelContext(try createSharedModelContainer(enableCloudKit: false))
+        let context = ModelContext(try createSharedModelContainer())
         let bbVehicle = try fetchBBVehicle(forVin: vehicle.vin, context: context)
         return .result(value: bbVehicle.evStatus?.pluggedIn ?? false)
     }
@@ -309,7 +197,7 @@ struct IsVehicleChargingIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
-        let context = ModelContext(try createSharedModelContainer(enableCloudKit: false))
+        let context = ModelContext(try createSharedModelContainer())
         let bbVehicle = try fetchBBVehicle(forVin: vehicle.vin, context: context)
         return .result(value: bbVehicle.evStatus?.charging ?? false)
     }
@@ -325,7 +213,7 @@ struct IsVehicleLockedIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
-        let context = ModelContext(try createSharedModelContainer(enableCloudKit: false))
+        let context = ModelContext(try createSharedModelContainer())
         let bbVehicle = try fetchBBVehicle(forVin: vehicle.vin, context: context)
         return .result(value: bbVehicle.lockStatus == .locked)
     }
@@ -341,7 +229,7 @@ struct IsClimateOnIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
-        let context = ModelContext(try createSharedModelContainer(enableCloudKit: false))
+        let context = ModelContext(try createSharedModelContainer())
         let bbVehicle = try fetchBBVehicle(forVin: vehicle.vin, context: context)
         return .result(value: bbVehicle.climateStatus?.airControlOn ?? false)
     }
@@ -357,7 +245,7 @@ struct GetBatteryPercentageIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Int> {
-        let context = ModelContext(try createSharedModelContainer(enableCloudKit: false))
+        let context = ModelContext(try createSharedModelContainer())
         let bbVehicle = try fetchBBVehicle(forVin: vehicle.vin, context: context)
         // EV battery first; fall back to gas tank percentage for ICE.
         if bbVehicle.fuelType.hasElectricCapability, let ev = bbVehicle.evStatus {
@@ -397,7 +285,7 @@ struct GetChargeTimeRemainingIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Int> {
-        let context = ModelContext(try createSharedModelContainer(enableCloudKit: false))
+        let context = ModelContext(try createSharedModelContainer())
         let bbVehicle = try fetchBBVehicle(forVin: vehicle.vin, context: context)
         guard let ev = bbVehicle.evStatus, ev.charging else { return .result(value: 0) }
         let minutes = Int(ev.chargeTime.components.seconds / 60)
@@ -428,7 +316,7 @@ private func performVehicleActionWithVin(
     _ vin: String,
     action: @escaping @MainActor (BBVehicle, BBAccount, ModelContext) async throws -> Void,
 ) async throws {
-    let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+    let modelContainer = try createSharedModelContainer()
     let context = ModelContext(modelContainer)
 
     let (vehicle, account) = try resolveVehicle(vin: vin, in: context)
@@ -449,7 +337,7 @@ private func performVehicleActionWithPreset(
     fallbackVin vin: String,
     action: @escaping @MainActor (BBVehicle, ClimatePreset?, BBAccount, ModelContext) async throws -> Void,
 ) async throws {
-    let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+    let modelContainer = try createSharedModelContainer()
     let context = ModelContext(modelContainer)
 
     let descriptor = FetchDescriptor<ClimatePreset>(predicate: #Predicate { $0.id == presetId })

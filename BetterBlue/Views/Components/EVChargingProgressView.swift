@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// Shared view for displaying EV charging progress
-/// Used by EVRangeChargingCard in the main app and VehicleActivityWidget for Live Activities
+/// Used by EVRangeChargingCard in the main app
 struct EVChargingProgressView: View {
     let icon: Image?
     let formattedRange: String

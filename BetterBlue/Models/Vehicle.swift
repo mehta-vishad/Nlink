@@ -94,7 +94,6 @@ class BBVehicle {
     var watchBackgroundColorName: String = "charcoal"
     var chargePortTypeRaw: String = ChargePortType.ccs1.rawValue
     var debugConfiguration: BBDebugConfiguration?
-    var debugLiveActivity: Bool = false
 
     /// Override to show seat heat controls on older vehicles (generation < 3)
     /// Ignored for generation 3+ vehicles where seat heat controls are always shown
@@ -616,7 +615,7 @@ extension BBVehicle: Encodable {
         case lastUpdated, syncDate, gasRange, evStatus, location, lockStatus, climateStatus
         case battery12V, doorOpen, trunkOpen, hoodOpen, accessoryOn, tirePressureWarning
         case customName, isHidden, sortOrder, backgroundColorName, watchBackgroundColorName
-        case chargePortTypeRaw, debugConfiguration, debugLiveActivity, enableSeatHeatControls
+        case chargePortTypeRaw, debugConfiguration, enableSeatHeatControls
         case primaryColorName, chargingColorName, gasColorName, lockColorName, unlockColorName, startClimateColorName
         case stopColorName
         case fuelTypeOverrideRaw
@@ -661,7 +660,6 @@ extension BBVehicle: Encodable {
         try container.encode(watchBackgroundColorName, forKey: .watchBackgroundColorName)
         try container.encode(chargePortTypeRaw, forKey: .chargePortTypeRaw)
         try container.encodeIfPresent(debugConfiguration, forKey: .debugConfiguration)
-        try container.encode(debugLiveActivity, forKey: .debugLiveActivity)
         try container.encode(enableSeatHeatControls, forKey: .enableSeatHeatControls)
 
         // Per-vehicle accent colors

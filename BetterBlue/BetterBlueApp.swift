@@ -39,13 +39,6 @@ struct BetterBlueApp: App {
         // Configure BetterBlueKit to use OSLog via AppLogger
         BBLogger.sink = OSLogSink.shared
 
-        // Spin up the CloudKit sync monitor BEFORE creating the
-        // container so we catch the initial `setup` event(s) that
-        // fire as SwiftData wires up its NSPersistentCloudKitContainer.
-        // Without this, the Diagnostics view shows "Last setup:
-        // never" even on a healthy launch.
-        Task { @MainActor in _ = CloudKitSyncMonitor.shared }
-
         do {
             let container = try createSharedModelContainer()
 
@@ -195,47 +188,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
-        // Request notification permissions and register for remote notifications
+        // Local notifications only — remote push needs an `aps-environment`
+        // entitlement a Personal Team cannot sign.
         Task {
             let notificationCenter = UNUserNotificationCenter.current()
             let granted = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
             AppLogger.push.info("AppDelegate: Notification permissions granted: \(granted ?? false)")
-
-            // Register for remote notifications to receive background wakeups
-            application.registerForRemoteNotifications()
         }
 
         return true
-    }
-
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        let tokenString = deviceToken.map { String(format: "%02x", $0) }.joined()
-        AppLogger.push.info("Received device token: \(tokenString.prefix(20), privacy: .public)...")
-        LiveActivityManager.shared.setDeviceToken(tokenString)
-    }
-
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        AppLogger.push.error("Failed to register for remote notifications: \(error)")
-    }
-
-    // Handle background push notifications for Live Activity wakeup
-    func application(
-        _ application: UIApplication,
-        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
-        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
-    ) {
-        AppLogger.push.info("Received remote notification: \(userInfo, privacy: .public)")
-
-        // Check if this is a Live Activity wakeup
-        if userInfo["liveActivityWakeup"] != nil {
-            AppLogger.push.info("Processing Live Activity wakeup push")
-            Task {
-                await LiveActivityManager.shared.handleWakeupPush()
-                completionHandler(.newData)
-            }
-        } else {
-            completionHandler(.noData)
-        }
     }
 
     // Allow notifications to show when app is in foreground

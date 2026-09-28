@@ -11,10 +11,7 @@ DEVELOPMENT_TEAM = C2UW47HS8X
 // (com.example -> com.example.BetterBlue, com.example.BetterBlue.Widget, ...).
 BB_BUNDLE_ID_PREFIX = com.markschmidt
 
-// App Group shared by the app, widgets, and watch app.
+// App Group shared by the app and the widget extension.
 BB_APP_GROUP = group.com.betterblue.shared
-
-// CloudKit container used for iCloud sync.
-BB_ICLOUD_CONTAINER = iCloud.com.markschmidt.BetterBlue
 
 #include? "Local.xcconfig"

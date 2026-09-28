@@ -442,7 +442,6 @@ extension BBAccount {
 
             status = try await api.fetchVehicleStatus(for: vehicle, authToken: authToken, cached: cached)
         }
-        LiveActivityManager.shared.updateActivity(for: bbVehicle, status: status, modelContext: modelContext)
         return status
     }
 
@@ -629,23 +628,6 @@ extension BBAccount {
 
             bbVehicle.vehicleKey = matchingVehicle.vehicleKey
             BBLogger.debug(.api, "BBAccount: Updated vehicleKey for VIN: \(bbVehicle.vin)")
-        }
-
-        // Start Live Activity monitoring for long-running commands
-        let activityType: LiveActivityType = switch command {
-        case .startClimate: .climate
-        case .startCharge: .charging
-        default: .none
-        }
-
-        if activityType != .none {
-            LiveActivityManager.shared.startCommandActivity(
-                for: bbVehicle,
-                type: activityType,
-                modelContext: modelContext,
-                climatePresetName: climatePresetName,
-                climatePresetIcon: climatePresetIcon
-            )
         }
 
         let vehicle = bbVehicle.toVehicle()

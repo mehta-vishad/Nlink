@@ -12,7 +12,6 @@ DEVELOPMENT_TEAM = YOUR_TEAM_ID
 // unique across teams, so you can't reuse com.markschmidt.
 BB_BUNDLE_ID_PREFIX = com.yourname
 
-// App Group and iCloud container identifiers registered to your team.
-// With automatic signing, Xcode registers these for you on first build.
+// App Group identifier registered to your team. With automatic signing,
+// Xcode registers this for you on first build.
 BB_APP_GROUP = group.com.yourname.betterblue
-BB_ICLOUD_CONTAINER = iCloud.com.yourname.BetterBlue

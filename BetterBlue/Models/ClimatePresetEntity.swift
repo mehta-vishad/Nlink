@@ -54,7 +54,7 @@ private struct ClimatePresetFetcher {
     /// the widget target and isn't visible from the main app target).
     static func primaryVehicleVin() -> String? {
         do {
-            let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+            let modelContainer = try createSharedModelContainer()
             let context = ModelContext(modelContainer)
             let descriptor = FetchDescriptor<BBVehicle>(
                 predicate: #Predicate { !$0.isHidden },
@@ -69,7 +69,7 @@ private struct ClimatePresetFetcher {
 
     static func fetchPresets(withIDs ids: [UUID]?) -> [ClimatePresetEntity] {
         do {
-            let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+            let modelContainer = try createSharedModelContainer()
             let context = ModelContext(modelContainer)
 
             // Fetch all presets directly (like @Query does)

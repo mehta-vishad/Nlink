@@ -22,6 +22,5 @@ struct BetterBlueWidgetBundle: WidgetBundle {
         StartChargeControlWidget()
         StopChargeControlWidget()
         SurroundViewControlWidget()
-        VehicleActivityWidget()
     }
 }

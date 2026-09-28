@@ -20,28 +20,28 @@ func getSimulatorStoreURL() -> URL {
     return URL(fileURLWithPath: sharedSimulatorPath).appendingPathComponent("BetterBlue.sqlite")
 }
 
-func getAppGroupStoreURL() throws -> URL {
+func getAppGroupStoreURL() -> URL? {
     let appGroupID = AppIdentifiers.appGroup
-    if let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-        return appGroupURL.appendingPathComponent("BetterBlue.sqlite")
-    } else {
+    guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
+    else {
         BBLogger.warning(.app, "BetterBlue: App Group container not accessible from current context")
-        throw NSError(
-            domain: "BetterBlue",
-            code: 1001,
-            userInfo: [
-                NSLocalizedDescriptionKey:
-                    "Vehicle data not accessible. Please open the BetterBlue app first to sync your vehicles.",
-                NSLocalizedRecoverySuggestionErrorKey:
-                    "Open the BetterBlue app and try again."
-            ],
-        )
+        return nil
     }
+    return appGroupURL.appendingPathComponent("BetterBlue.sqlite")
 }
 
-func createContainer(storeURL: URL, schema: Schema, cloudKitDatabase: ModelConfiguration.CloudKitDatabase = .automatic) throws -> ModelContainer {
+/// Per-process store, used when the App Group container is unavailable —
+/// the widget extension then keeps its own cache instead of sharing the
+/// app's. See Gate G1 in the work order.
+func getLocalStoreURL() -> URL {
+    let base = URL.applicationSupportDirectory
+    try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    return base.appendingPathComponent("BetterBlue.sqlite")
+}
+
+func createContainer(storeURL: URL, schema: Schema) throws -> ModelContainer {
     do {
-        let modelConfiguration = ModelConfiguration(url: storeURL, cloudKitDatabase: cloudKitDatabase)
+        let modelConfiguration = ModelConfiguration(url: storeURL, cloudKitDatabase: .none)
         return try ModelContainer(for: schema, configurations: [modelConfiguration])
     } catch {
         BBLogger.error(.app, "BetterBlue: Failed to create ModelContainer: \(error)")
@@ -84,9 +84,9 @@ func cleanupOrphanedClimatePresets(container: ModelContainer) {
 }
 
 /// Removes "zombie" vehicles whose parent `BBAccount` no longer exists.
-/// Normally `BBAccount` → `BBVehicle` is cascade-delete, but interrupted
-/// CloudKit syncs and earlier schema iterations can leave orphan vehicle
-/// rows that Siri/App Intents/widget pickers would otherwise still list.
+/// Normally `BBAccount` → `BBVehicle` is cascade-delete, but earlier schema
+/// iterations can leave orphan vehicle rows that Siri/App Intents/widget
+/// pickers would otherwise still list.
 /// Their cascaded `climatePresets` are dropped by SwiftData automatically
 /// once the vehicle goes away.
 @MainActor
@@ -115,8 +115,8 @@ func cleanupOrphanedVehicles(container: ModelContainer) {
 
 /// Removes duplicate `BBVehicle` rows that share a VIN within one account.
 /// `BBAccount.updateVehicles()` keys existing vehicles by VIN, so it never
-/// creates a second row itself — but an iCloud merge (reinstall, second
-/// device) can land one, and once two exist neither is ever swept up
+/// creates a second row itself — but a store migrated from an iCloud-synced
+/// build can carry one, and once two exist neither is ever swept up
 /// because both match the fetched VIN. The duplicate is worse than
 /// cosmetic: intents and widgets resolve vehicles by VIN and can land on
 /// the wrong copy, running commands with that copy's presets. Keep the
@@ -160,11 +160,10 @@ func cleanupDuplicateVehicles(container: ModelContainer) {
     }
 }
 
-/// Creates a shared ModelContainer for use across main app, widget, and watch app.
-/// - Parameter enableCloudKit: Whether to enable CloudKit sync. Set to `false` for
-///   App Intents and widgets running in the background to avoid `0xdead10cc` crashes
-///   caused by holding SQLite file locks during process suspension.
-func createSharedModelContainer(enableCloudKit: Bool = true) throws -> ModelContainer {
+/// Creates the shared ModelContainer used by the app and the widget extension.
+/// Storage is local-only: CloudKit needs an iCloud entitlement a Personal Team
+/// cannot sign, so it was removed along with the push and Watch targets.
+func createSharedModelContainer() throws -> ModelContainer {
     let schema = Schema([
         BBAccount.self,
         BBVehicle.self,
@@ -172,24 +171,10 @@ func createSharedModelContainer(enableCloudKit: Bool = true) throws -> ModelCont
         ClimatePreset.self
     ], version: .init(1, 0, 9))
 
-    let cloudKitDatabase: ModelConfiguration.CloudKitDatabase = enableCloudKit ? .automatic : .none
-
     #if targetEnvironment(simulator)
         let storeURL = getSimulatorStoreURL()
-        return try createContainer(storeURL: storeURL, schema: schema, cloudKitDatabase: cloudKitDatabase)
     #else
-        let cloudConfig = ModelConfiguration(
-            AppIdentifiers.iCloudContainer,
-            cloudKitDatabase: cloudKitDatabase
-        )
-
-        if let container = try? ModelContainer(
-            for: schema,
-            configurations: [cloudConfig]
-        ) {
-            return container
-        }
-        let storeURL = try getAppGroupStoreURL()
-        return try createContainer(storeURL: storeURL, schema: schema, cloudKitDatabase: cloudKitDatabase)
+        let storeURL = getAppGroupStoreURL() ?? getLocalStoreURL()
     #endif
+    return try createContainer(storeURL: storeURL, schema: schema)
 }

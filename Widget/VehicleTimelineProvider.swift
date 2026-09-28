@@ -82,7 +82,7 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
         let allPresets = (try? await ClimatePresetEntity.defaultQuery.suggestedEntities()) ?? []
 
         do {
-            let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+            let modelContainer = try createSharedModelContainer()
 
             // Configure the HTTP log sink manager for widget — must
             // share the same container so log writes land in the
@@ -103,7 +103,7 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
             // Fall back to cached data with a fresh container so the
             // failed one's open transactions (if any) are torn down.
             do {
-                let modelContainer = try createSharedModelContainer(enableCloudKit: false)
+                let modelContainer = try createSharedModelContainer()
                 await MainActor.run {
                     HTTPLogSinkManager.shared.configure(with: modelContainer, deviceType: .widget)
                 }

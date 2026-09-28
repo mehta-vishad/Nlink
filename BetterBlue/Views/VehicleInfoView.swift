@@ -107,18 +107,6 @@ struct VehicleInfoView: View {
                 }
             }
 
-            #if DEBUG
-            Toggle("Debug Live Activity", isOn: Binding(
-                get: { bbVehicle.debugLiveActivity },
-                set: { newValue in
-                    bbVehicle.debugLiveActivity = newValue
-                    try? modelContext.save()
-                    LiveActivityManager.shared.updateDebugActivity(for: bbVehicle)
-                }
-            ))
-
-            #endif
-
         }
         .navigationTitle("Vehicle Info")
         .navigationBarTitleDisplayMode(.inline)

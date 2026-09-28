@@ -10,10 +10,6 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-#if canImport(ActivityKit)
-    import ActivityKit
-#endif
-
 #if canImport(UserNotifications)
     import UserNotifications
 #endif
@@ -135,7 +131,6 @@ class AppSettings {
     private let notificationsEnabledKey = "NotificationsEnabled"
     private let widgetRefreshIntervalKey = "WidgetRefreshInterval"
     private let debugModeEnabledKey = "DebugModeEnabled"
-    private let liveActivitiesEnabledKey = "LiveActivitiesEnabled"
 
     var preferredDistanceUnit: Distance.Units {
         didSet {
@@ -143,7 +138,7 @@ class AppSettings {
             syncStore.setString(preferredDistanceUnit.rawValue, forKey: distanceUnitKey)
             userDefaults.set(preferredDistanceUnit.rawValue, forKey: distanceUnitKey)
             syncStore.performSync()
-            refreshWidgetsAndLiveActivities()
+            refreshWidgets()
         }
     }
 
@@ -153,7 +148,7 @@ class AppSettings {
             syncStore.setString(preferredTemperatureUnit.rawValue, forKey: temperatureUnitKey)
             userDefaults.set(preferredTemperatureUnit.rawValue, forKey: temperatureUnitKey)
             syncStore.performSync()
-            refreshWidgetsAndLiveActivities()
+            refreshWidgets()
         }
     }
 
@@ -232,14 +227,14 @@ class AppSettings {
     var watchComplicationVIN: String? {
         didSet {
             userDefaults.set(watchComplicationVIN, forKey: Self.watchComplicationVINKey)
-            refreshWidgetsAndLiveActivities()
+            refreshWidgets()
         }
     }
 
     var watchComplicationColor: WatchComplicationColor {
         didSet {
             userDefaults.set(watchComplicationColor.rawValue, forKey: Self.watchComplicationColorKey)
-            refreshWidgetsAndLiveActivities()
+            refreshWidgets()
         }
     }
 
@@ -265,12 +260,6 @@ class AppSettings {
     var debugModeEnabled: Bool {
         didSet {
             userDefaults.set(debugModeEnabled, forKey: debugModeEnabledKey)
-        }
-    }
-
-    var liveActivitiesEnabled: Bool {
-        didSet {
-            userDefaults.set(liveActivitiesEnabled, forKey: liveActivitiesEnabledKey)
         }
     }
 
@@ -324,9 +313,6 @@ class AppSettings {
         } else {
             debugModeEnabled = userDefaults.bool(forKey: debugModeEnabledKey)
         }
-
-        // Live Activities is a beta feature, disabled by default
-        liveActivitiesEnabled = userDefaults.bool(forKey: liveActivitiesEnabledKey)
 
         // Start sync store and listen for changes from other devices
         syncStore.performSync()
@@ -400,20 +386,9 @@ class AppSettings {
         #endif
     }
 
-    private func refreshWidgetsAndLiveActivities() {
-        
+    private func refreshWidgets() {
         // Refresh all widgets to pick up the new unit settings
-        BBLogger.info(.app, "Refreshing widget and live activities")
+        BBLogger.info(.app, "Refreshing widgets")
         WidgetCenter.shared.reloadAllTimelines()
-
-        // Refresh all live activities to pick up the new unit settings
-        #if canImport(ActivityKit)
-            Task { @MainActor in
-                for activity in Activity<VehicleActivityAttributes>.activities {
-                    let currentState = activity.content.state
-                    await activity.update(ActivityContent(state: currentState, staleDate: nil))
-                }
-            }
-        #endif
     }
 }
