@@ -4,7 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BetterBlue is a native iOS/watchOS app for controlling Hyundai and Kia vehicles via BlueLink/Kia Connect services. Built with SwiftUI, SwiftData, and powered by the [BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) Swift package.
+ENlink is a fork of [BetterBlue](https://github.com/schmidtwmark/BetterBlue) (MIT, by Mark Schmidt),
+reduced to a single-vehicle iOS app plus a home screen widget for a 2025 Hyundai Elantra N.
+Built with SwiftUI, SwiftData, and powered by the
+[BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) Swift package.
+
+The plan of record is `workorder.md` at the repo root. Read it before making structural changes.
+
+### What this fork removed, and why
+
+The app is signed with a **free Apple Developer Personal Team**, which cannot sign
+iCloud, Push Notifications, or a Watch app. Phase 1 of the work order therefore deleted:
+
+- the `BetterBlueWatch Watch App` and `WatchWidgetExtension` targets
+- `LiveActivityBackend` (the serverless push backend) and all ActivityKit code
+- the `aps-environment` and iCloud/CloudKit entitlements
+- CloudKit-backed SwiftData storage and the CloudKit sync diagnostics
+
+Do not reintroduce any of these unless the project moves to a paid account
+(work order Phase 9). Two targets remain: `BetterBlue` and `WidgetExtension`.
 
 ### BetterBlueKit Submodule
 
@@ -20,22 +38,31 @@ git submodule update --init --recursive
 ## Build Commands
 
 ### Building the Project
+If `xcode-select -p` points at `/Library/Developer/CommandLineTools`, either fix it
+(`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`) or set
+`DEVELOPER_DIR` per-command — the latter needs no password:
+
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+```
+
 ```bash
 # Open in Xcode
 open BetterBlue.xcodeproj
 
-# Build for iOS simulator
-xcodebuild -scheme BetterBlue -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
+# Build for iOS simulator (no signing needed — use this to check compilation)
+xcodebuild -scheme BetterBlue -destination 'platform=iOS Simulator,name=iPhone 17' \
+  CODE_SIGNING_ALLOWED=NO build
 
-# Build for device
+# Build for device (requires Config/Local.xcconfig — create it with scripts/setup-signing.sh)
 xcodebuild -scheme BetterBlue -destination 'generic/platform=iOS' build
-
-# Build Watch app
-xcodebuild -scheme "BetterBlueWatch Watch App" build
 
 # Build Widget extension
 xcodebuild -scheme WidgetExtension build
 ```
+
+Building the `BetterBlue` scheme also builds and embeds `WidgetExtension.appex`,
+so it is the single check that covers both targets.
 
 ### Linting
 SwiftLint has been removed from the project to avoid plugin conflicts when BetterBlueKit is used as a local package. You can run SwiftLint manually if needed:
@@ -46,11 +73,15 @@ swiftlint lint
 ## Architecture
 
 ### Multi-Target Structure
-The project consists of four targets sharing a common SwiftData container:
-- **BetterBlue** (Main iOS app)
-- **BetterBlueWatch Watch App** (watchOS companion)
-- **Widget** (iOS widgets, lock screen widgets, control center widgets, and Live Activities)
-- **BetterBlueKit** (External Swift package for API communication)
+Two targets share a common SwiftData container:
+- **BetterBlue** (main iOS app)
+- **WidgetExtension** (home screen, lock screen, and Control Center widgets)
+- **BetterBlueKit** (local Swift package submodule for API communication)
+
+Both targets use Xcode's *file system synchronized groups*: any file added under
+`BetterBlue/` or `Widget/` joins that target automatically. To compile a file from
+`BetterBlue/` into `WidgetExtension` as well, add it to that target's
+`PBXFileSystemSynchronizedBuildFileExceptionSet` in the project file.
 
 ### Data Persistence Layer
 
@@ -62,11 +93,21 @@ All models are in `BetterBlue/Models/`:
 - `ClimatePreset.swift` - User-defined climate control presets
 
 #### Shared Model Container
-`SharedModelContainer.swift` provides the critical `createSharedModelContainer()` function:
-- **Simulator**: Uses `/tmp/BetterBlue_Shared` to work around App Group isolation
-- **Device**: Uses iCloud sync with App Group fallback
-- All targets must use this function to ensure data sharing
-- The App Group and iCloud container identifiers come from `AppIdentifiers` (`BetterBlue/Utility/AppIdentifiers.swift`), which reads them from Info.plist keys injected from `Config/Shared.xcconfig` (defaults: `group.com.betterblue.shared`, `iCloud.com.markschmidt.BetterBlue`; per-machine overrides in gitignored `Config/Local.xcconfig`). Never hardcode these strings in source — use `AppIdentifiers`.
+`SharedModelContainer.swift` provides the critical `createSharedModelContainer()` function.
+Storage is **local-only** — there is no CloudKit sync:
+- **Simulator**: uses `/tmp/BetterBlue_Shared` to work around App Group isolation
+- **Device**: App Group container when available, otherwise a per-process store
+  under Application Support (`getLocalStoreURL()`)
+- Both targets must use this function to ensure data sharing
+- The App Group identifier comes from `AppIdentifiers` (`BetterBlue/Utility/AppIdentifiers.swift`),
+  which reads an Info.plist key injected from `Config/Shared.xcconfig` (default
+  `group.com.betterblue.shared`; per-machine overrides in gitignored `Config/Local.xcconfig`).
+  Never hardcode this string in source — use `AppIdentifiers`.
+
+The App Group fallback is deliberate. Whether a Personal Team can sign an App Group
+entitlement is Gate G1 in the work order: if it signs, app and widget share one store;
+if not, the widget logs in and caches on its own and the fallback path takes over with
+no code change.
 
 ### API Client Architecture
 
@@ -96,9 +137,9 @@ All models are in `BetterBlue/Models/`:
 - **Lock/Unlock**: `LockVehicleIntent`, `UnlockVehicleIntent` with status waiting
 - **Climate**: `StartClimateIntent`, `StopClimateIntent` (start uses selected climate preset)
 - **Status**: `RefreshVehicleStatusIntent`, `GetVehicleStatusIntent`
-- **Live Activities**: `VehicleLiveActivityManager` coordinates status updates during long-running operations
 
 Control Center widgets use `ControlConfigurationIntent` for user-configured vehicle selection.
+Notifications are **local only**; there is no remote push registration.
 
 ### Fake Vehicle Mode
 
@@ -154,11 +195,17 @@ This ensures API client is created and login is performed.
 3. Use `createSharedModelContainer()` in timeline provider
 4. Query `BBVehicle` with proper predicates for filtering
 
+### Credentials
+Never commit credentials. `Secrets.swift` is gitignored everywhere in the tree;
+`Config/Secrets.example.swift` is the committed template. Verify with
+`git check-ignore -v <path>` before a first push.
+
 ### Debugging Data Sync Issues
 - Check device type detection in `HTTPLogSinkManager.detectMainAppDeviceType()`
-- Verify App Group container is accessible: look for "App Group container not accessible" warnings
+- Verify App Group container is accessible: look for "App Group container not accessible"
+  warnings — that message means the store fell back to the per-process location
 - On simulator, check `/tmp/BetterBlue_Shared/BetterBlue.sqlite`
-- Use Diagnostics view (Settings > About) to inspect iCloud sync status
+- Use Diagnostics view (Settings > About) to inspect accounts, vehicles, and store path
 
 ## File Organization
 
@@ -166,8 +213,8 @@ This ensures API client is created and login is performed.
 - `BetterBlue/Views/Components/` - Reusable view components
 - `BetterBlue/Models/` - SwiftData models
 - `BetterBlue/Utility/` - Helper classes and utilities
-- `BetterBlueWatch Watch App/` - watchOS app files
-- `Widget/` - Widget extensions, App Intents, and Live Activities
+- `Widget/` - Widget extension, widget views, and App Intents
+- `Config/` - xcconfig signing overrides and the `Secrets.example.swift` template
 
 ## Important Conventions
 
