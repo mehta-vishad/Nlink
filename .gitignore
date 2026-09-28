@@ -77,3 +77,8 @@ Config/Local.xcconfig
 secrets.plist
 config.plist
 UserDefaults.plist
+# Bluelink credentials (Gate G1 fallback — see Config/Secrets.example.swift).
+# Must stay ignored: this tree is a fork of a public repo.
+Secrets.swift
+**/Secrets.swift
+*.secrets.swift
