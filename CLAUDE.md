@@ -154,9 +154,15 @@ container background with system Liquid Glass and render content in a single tin
 The car image comes from `scripts/cutout-car.swift` (Vision subject lifting),
 `scripts/neutralize-car.swift` (studio-style tone) and `scripts/make-car-asset.swift` (sizing;
 `--fade-left` only for photos cropped at the rear). It is CC BY-SA 4.0 — keep the README
-credit if it is replaced or regenerated. Do not use Hyundai, EVOX/KBB or other manufacturer or
-stock renders: they are copyrighted and the repo is public. The car faces left, so the layout
-puts text on the left and the car on the right.
+credit if it is replaced or regenerated. The car faces left, so the layout puts text on the
+left and the car on the right; `ENlinkCar.size(in:)` sizes it from the image's real proportions.
+
+**Local override.** If `Widget/Assets.xcassets/ElantraNLocal.imageset` exists, the widget uses it
+instead (`ENlinkCarArt`). It is git-ignored, as is `LocalAssets/`, and holds the owner's
+personal-use image — currently Hyundai's own studio render (`2025-elantra-n-6mt-performance-blue-001`,
+built with `make-car-asset.swift ... --trim`). **Never commit or push either path**: the repo is
+public and those renders are Hyundai's copyright. Never add EVOX/KBB renders at all (watermarked,
+commercially licensed).
 
 When no vehicle is configured, surfaces use `BBVehicle.primary(in:)` /
 `VehicleQuery.defaultResult()`, which put Fake Vehicle Mode accounts last.

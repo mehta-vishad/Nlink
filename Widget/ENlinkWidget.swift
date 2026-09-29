@@ -10,6 +10,7 @@
 import AppIntents
 import BetterBlueKit
 import SwiftUI
+import UIKit
 import WidgetKit
 
 // MARK: - Widget
@@ -93,7 +94,19 @@ enum ENlinkStyle {
     /// refresh that should confirm it. Phase 6 retunes this from the
     /// latencies measured in Phase 2.
     static let pendingWindow: TimeInterval = 30 * 60
-    static let carImage = "ElantraN"
+}
+
+/// The car image. A locally generated `ElantraNLocal` — git-ignored, because it
+/// is a manufacturer render used privately on the owner's phone — wins over the
+/// committed CC BY-SA `ElantraN`, so the public repo always builds and only
+/// ever ships a licensed image. Either faces left, toward the text column.
+enum ENlinkCarArt {
+    static let name: String = UIImage(named: "ElantraNLocal") != nil ? "ElantraNLocal" : "ElantraN"
+
+    static let aspectRatio: CGFloat = {
+        guard let size = UIImage(named: name)?.size, size.height > 0 else { return 660.0 / 324.0 }
+        return size.width / size.height
+    }()
 }
 
 // MARK: - Views
@@ -126,7 +139,7 @@ struct ENlinkBackground: View {
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
             GeometryReader { geo in
-                Image(ENlinkStyle.carImage)
+                Image(ENlinkCarArt.name)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: geo.size.width * 0.95, height: geo.size.height * 1.3)
@@ -173,11 +186,11 @@ struct ENlinkCard: View {
         GeometryReader { geo in
             let width = geo.size.width
             let height = geo.size.height
-            let carWidth = width * ENlinkCar.widthFraction
+            let car = ENlinkCar.size(in: geo.size)
 
             ZStack(alignment: .topLeading) {
-                ENlinkCar(width: carWidth)
-                    .offset(x: width - carWidth - width * 0.025, y: height - carWidth / ENlinkCar.aspectRatio - 10)
+                ENlinkCar(size: car)
+                    .offset(x: width - car.width - width * 0.025, y: height - car.height - 10)
 
                 ENlinkInfoColumn(vehicle: vehicle, now: now)
                     .padding(.top, 14)
@@ -197,26 +210,35 @@ struct ENlinkCard: View {
 /// The car on a soft floor shadow. Kept in full color in accented mode: the
 /// point of the image is that it matches the real paint.
 struct ENlinkCar: View {
-    static let aspectRatio: CGFloat = 660.0 / 324.0
-    static let widthFraction: CGFloat = 0.56
-    let width: CGFloat
+    /// The largest size that fits the car's slot: at most 57% of the card's
+    /// width — so the nose stops short of the text column and its buttons —
+    /// and 64% of its height, whichever binds first for this image's
+    /// proportions (a three-quarter photo is height-bound, a side profile
+    /// width-bound).
+    static func size(in card: CGSize) -> CGSize {
+        let ratio = ENlinkCarArt.aspectRatio
+        let width = min(card.width * 0.57, card.height * 0.64 * ratio)
+        return CGSize(width: width, height: width / ratio)
+    }
+
+    let size: CGSize
     var opacity: Double = 1
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Ellipse()
                 .fill(.black.opacity(0.65))
-                .frame(width: width * 0.86, height: width * 0.07)
+                .frame(width: size.width * 0.86, height: min(size.width * 0.07, size.height * 0.16))
                 .blur(radius: 7)
-                .offset(x: width * 0.02, y: -width * 0.005)
-            Image(ENlinkStyle.carImage)
+                .offset(x: size.width * 0.02, y: -size.height * 0.01)
+            Image(ENlinkCarArt.name)
                 .resizable()
                 .interpolation(.high)
                 .widgetAccentedRenderingMode(.fullColor)
                 .aspectRatio(contentMode: .fit)
                 .opacity(opacity)
         }
-        .frame(width: width, height: width / Self.aspectRatio)
+        .frame(width: size.width, height: size.height)
         .accessibilityLabel("Car")
     }
 }
@@ -513,10 +535,10 @@ struct ENlinkEmptyCard: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
-                let carWidth = geo.size.width * ENlinkCar.widthFraction
-                ENlinkCar(width: carWidth, opacity: 0.35)
-                    .offset(x: geo.size.width - carWidth - geo.size.width * 0.025,
-                            y: geo.size.height - carWidth / ENlinkCar.aspectRatio - 10)
+                let car = ENlinkCar.size(in: geo.size)
+                ENlinkCar(size: car, opacity: 0.35)
+                    .offset(x: geo.size.width - car.width - geo.size.width * 0.025,
+                            y: geo.size.height - car.height - 10)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Elantra N")
                         .font(.system(size: 11, weight: .semibold))

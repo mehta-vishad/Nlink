@@ -36,6 +36,10 @@ Everything is stored locally on the phone.
 2. `./scripts/setup-signing.sh` — writes the gitignored `Config/Local.xcconfig`.
 3. `open BetterBlue.xcodeproj`, pick the **BetterBlue** scheme and your iPhone, press ▶.
 
+Optionally drop your own image into `Widget/Assets.xcassets/ElantraNLocal.imageset` (git-ignored)
+and the widget uses it instead of the bundled photo — for example a picture of your own car run
+through `scripts/cutout-car.swift` and `scripts/make-car-asset.swift`.
+
 To try it without a real car, add an account with the username
 `testaccount@betterblue.com` and password `betterblue`. That is BetterBlue's built-in
 Fake Vehicle Mode; it never contacts Hyundai.

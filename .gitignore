@@ -86,3 +86,8 @@ Secrets.swift
 # Logs pulled off the iPhone by scripts/pull-phone-logs.sh (redacted, but still
 # the car's real status data — keep out of this public repo).
 .phone-logs/
+
+# Hyundai-copyrighted studio renders for personal, on-device use only. Never commit or
+# push these: the repo is public. The app falls back to the committed CC BY-SA photo.
+LocalAssets/
+Widget/Assets.xcassets/ElantraNLocal.imageset/

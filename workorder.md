@@ -271,8 +271,13 @@ BetterBlueKit's status model covers battery, EV range, fuel level, gas range, lo
 > Credited in the README; the license allows it in the public repo and even commercially.
 > 660×324 @3x, under 1 MB decoded.
 >
-> Rejected on licensing: Hyundai's own transparent renders, EVOX/KBB studio renders (watermarked,
-> commercially licensed), and branded 3D models (sold "editorial use only"). Any realistic image
+> Rejected for the *repo* on licensing: Hyundai's own transparent renders, EVOX/KBB studio
+> renders (watermarked, commercially licensed), and branded 3D models (sold "editorial use only").
+>
+> **On the owner's phone (2026-09-29):** since ENlink is personal and not for sale, the owner chose
+> Hyundai's studio render (side profile, Performance Blue) for private use. It lives in the
+> git-ignored `ElantraNLocal` image set and overrides the committed photo at runtime; the public
+> repo still ships only the CC BY-SA photo. Any realistic image
 > of the car carries Hyundai's design and trademark rights; the clean path to a studio-style
 > image of *this* car is the owner's own photo run through the same pipeline.
 > Checked: edges clean on dark, full color on Clear/Tinted home screens. Still to check on the
