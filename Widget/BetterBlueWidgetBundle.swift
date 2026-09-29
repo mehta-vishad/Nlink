@@ -12,6 +12,7 @@ import WidgetKit
 @main
 struct BetterBlueWidgetBundle: WidgetBundle {
     var body: some Widget {
+        ENlinkWidget()
         BetterBlueWidget()
         BetterBlueLockScreenWidget()
         BetterBlueLockScreenRangeWidget()

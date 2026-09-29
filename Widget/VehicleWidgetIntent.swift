@@ -408,6 +408,13 @@ struct VehicleEntity: AppEntity {
     var timestamp: Date
     var presets: [ClimatePresetEntity] = []
 
+    /// Odometer in `odometerUnit`, or nil when the car has not reported one.
+    /// `BBAccount.updateVehicles` never lets a 0 reading overwrite a real one,
+    /// but a car that has never reported still holds the model default of 0 —
+    /// that is "no reading", never "0 mi".
+    var odometerValue: Double?
+    var odometerUnit: Distance.Units = .miles
+
     // MARK: - Operational state (for Shortcuts conditionals)
     //
     // Each property is annotated with `@Property(title:)` so it shows
@@ -609,6 +616,10 @@ struct VehicleEntity: AppEntity {
         startClimateColorName = bbVehicle.startClimateColorName
         stopColorName = bbVehicle.stopColorName
         timestamp = bbVehicle.lastUpdated ?? Date()
+        odometerUnit = unit
+        odometerValue = bbVehicle.odometer.length > 0
+            ? bbVehicle.odometer.units.convert(bbVehicle.odometer.length, to: unit)
+            : nil
 
         // Compute per-fuel-type range/percentage separately so PHEVs
         // (which have BOTH ev + gas data) populate both axes — and
