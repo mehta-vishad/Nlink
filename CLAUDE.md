@@ -142,12 +142,32 @@ also need its own credentials (`Config/Secrets.example.swift`) — that part is 
 Control Center widgets use `ControlConfigurationIntent` for user-configured vehicle selection.
 Notifications are **local only**; there is no remote push registration.
 
+### ENlink widget
+
+`Widget/ENlinkWidget.swift` is this fork's home screen widget (systemMedium, registered first
+in `BetterBlueWidgetBundle`). It reuses `VehicleTimelineProvider.loadVehicle(_:)` for data and
+the existing `*ControlIntent`s for its buttons. Visual tokens live in `ENlinkStyle`; the
+Performance Blue values were measured from the car photo. Check changes in every rendering
+mode: full color draws its own glass background, while Clear/Tinted home screens replace the
+container background with system Liquid Glass and render content in a single tint.
+
+The car image comes from `scripts/cutout-car.swift` (Vision subject lifting) and
+`scripts/make-car-asset.swift` (sizing, rear-edge fade). It is CC BY-SA 4.0 — keep the README
+credit if it is replaced or regenerated.
+
+When no vehicle is configured, surfaces use `BBVehicle.primary(in:)` /
+`VehicleQuery.defaultResult()`, which put Fake Vehicle Mode accounts last.
+
 ### Fake Vehicle Mode
 
 Testing without real vehicles is supported via `Brand.fake`:
 - `SwiftDataFakeVehicleProvider` (`BetterBlue/Utility/`) stores fake vehicle state in SwiftData
 - `BBDebugConfiguration` struct enables simulating various failure modes
 - Fake accounts automatically created for test credentials (see `APIClientFactory.isTestAccount()`)
+- A fake account starts with **no cars**: add them under *Fake Vehicles* on the Add Account
+  screen (or later in the account's info screen) before tapping Add
+- In the Simulator, build **signed** (omit `CODE_SIGNING_ALLOWED=NO`): an unsigned widget
+  extension never renders and stays on its placeholder
 
 ## Key Concepts
 

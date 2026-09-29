@@ -4,7 +4,7 @@
 **Approach:** Fork of [BetterBlue](https://github.com/schmidtwmark/BetterBlue) (MIT) + [BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) (MIT)
 **Target platform:** iOS 27 (iOS 17+ APIs), Xcode 27
 **Signing:** Free Apple Developer Personal Team, with a decision gate to upgrade to paid
-**Status:** Phase 1 complete. Phase 2 ready — waiting on the first real-account session at the car
+**Status:** Phases 0, 1, 3 (ground truth), 4 done. Phase 2 half done (status yes, commands not yet). Phase 5 first version on the widget
 **Last updated:** 2026-09-28
 **Repo:** `git@github.com:mehta-vishad/Nlink.git` (public)
 
@@ -30,7 +30,7 @@ These block specific phases. Nothing else is gated on them.
 
 | Input | Needed by | Status |
 |---|---|---|
-| Exterior paint color of the car | Phase 4 | **Open** |
+| Exterior paint color of the car | Phase 4 | Performance Blue (API: `color` BLUE, `sapColorCode` XFB) |
 | Bluelink account email, password, 4-digit PIN | Phase 2 | Held by owner |
 | VIN | Phase 2 | Held by owner |
 | Mac with Xcode 27 installed | Phase 0 | Confirmed — Xcode 27.0 (27A266a), iOS 27 SDK |
@@ -67,7 +67,7 @@ These are not preferences. They are hard limits that shape the architecture, and
 - [ ] Enable wireless debugging: Window → Devices and Simulators → select device → Connect via network
 - [ ] Confirm the Bluelink **Remote** package subscription is active, not just Guidance
 - [ ] Confirm lock, unlock and remote start all work from the official MyHyundai app
-- [ ] Record the current dashboard odometer reading (needed as ground truth in Phase 3)
+- [x] Record the current dashboard odometer reading (needed as ground truth in Phase 3) — **11,071 mi** (2026-09-28)
 
 **Testing**
 
@@ -166,9 +166,9 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 
 - [ ] Populate credentials via whichever mechanism Gate G1 selected
 - [ ] Configure `APIClientConfiguration(region: .usa, brand: .hyundai, ...)`
-- [ ] Verify `client.login()` returns a valid auth token
-- [ ] Verify `fetchVehicles(authToken:)` returns the Elantra N with correct VIN
-- [ ] Verify `fetchVehicleStatus(for:authToken:)` returns fuel level, gas range, lock state, location
+- [x] Verify `client.login()` returns a valid auth token (2026-09-28, via the app)
+- [x] Verify `fetchVehicles(authToken:)` returns the Elantra N with correct VIN
+- [x] Verify `fetchVehicleStatus(for:authToken:)` returns fuel level, gas range, lock state, location (owner confirmed the app's values match the car)
 - [ ] Send `VehicleCommand.lock` and confirm the car physically responds
 - [ ] Send `VehicleCommand.unlock` and confirm
 - [ ] Send `VehicleCommand.startClimate(ClimateOptions(...))` with temperature, defrost, duration and per-seat heat, confirm the car starts
@@ -193,6 +193,13 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 - All six command types verified against the physical car
 - A saved fixture of the real status JSON
 - Median and worst-case command latency recorded
+
+> **Findings (2026-09-28), from the vehicle-list response.** `vehicleGeneration` is **2**, not 3.
+> The same response lists both front seats as `heatingCapable: YES` (levels 2,6,7,8, no
+> ventilation), plus steering-wheel, rear-window and mirror heat. So seat heat *should* be
+> accepted despite generation 2 — confirm with the full-options climate test. BetterBlue hides
+> seat-heat controls for generation < 3 unless the per-vehicle `enableSeatHeatControls`
+> override is on. Transmission reports `AUTO` (DCT).
 
 **Risk**
 
@@ -233,7 +240,7 @@ BetterBlueKit's status model covers battery, EV range, fuel level, gas range, lo
 | Zero-reading guard | Unit test with a hand-edited fixture where odometer is 0 | Returns nil or last-known, never 0 |
 | Missing field | Unit test with the odometer block deleted | Decodes cleanly as nil, no throw |
 | Unit conversion | Unit test, km payload | Converts correctly if the API ever reports metric |
-| Ground truth | Compare live reading to the dashboard number recorded in Phase 0 | Within normal drift (the API reading lags the dash) |
+| Ground truth | Compare live reading to the dashboard number recorded in Phase 0 | Within normal drift (the API reading lags the dash) — **passed**: API 11,071 = dash 11,071 (`odometerUpdateDate` 2026-09-27 20:50) |
 | Regression | `swift test` on BetterBlueKit | Existing suite still green |
 
 **Exit criteria**
@@ -249,6 +256,14 @@ BetterBlueKit's status model covers battery, EV range, fuel level, gas range, lo
 **Objective:** A transparent PNG of the car, color-matched, that looks right on near-black.
 
 **Blocked on:** paint color.
+
+> **Done (2026-09-28).** Neither source option was used. Instead: a CC BY-SA 4.0 photo of a
+> Performance Blue Elantra N (CN7 PE — same body as the 2025) from Wikimedia Commons, lifted off
+> its background with Apple Vision (`scripts/cutout-car.swift`), sized for the slot with the
+> cropped rear edge faded (`scripts/make-car-asset.swift`). Credited in the README. The license
+> allows it in the public repo, which a Hyundai render would not. 690×441 @3x, ~1.2 MB decoded.
+> Checked: edges clean on dark, full color on Clear/Tinted home screens. Still to check on the
+> phone: color vs. the real car in daylight, 3x sharpness, no memory kills.
 
 **Tasks**
 
@@ -283,6 +298,13 @@ BetterBlueKit's status model covers battery, EV range, fuel level, gas range, lo
 ### Phase 5 — Widget UI
 
 **Objective:** The visual design. Static data at this stage; buttons come next.
+
+> **First version (2026-09-28): `Widget/ENlinkWidget.swift`.** Dark glass card in full-color
+> mode (blurred car colors, sheen, rim light); real Liquid Glass on Clear/Tinted home screens;
+> SF Pro throughout. Designed states: locked, unlocked, stale (> 6 h, amber time), command in
+> flight, no car. Buttons reuse the existing control intents, so they already work.
+> Verified in the Simulator: Default and Clear styles, vehicle switching, lock button.
+> Still to do: real-data check on the phone, Dynamic Type at accessibility sizes, `.vibrant`.
 
 **Tasks**
 
