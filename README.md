@@ -15,11 +15,13 @@ Built phase by phase from [`workorder.md`](workorder.md), which is the plan of r
 
 | Phase | What | State |
 |---|---|---|
-| 0 | Toolchain and car baseline | Xcode verified; Apple ID and car checks pending |
-| 1 | Fork, strip, sign | Code done; waiting on first device signing (Gate G1) |
-| 2 | Live connection to the car | Not started |
-| 3 | Odometer | Mostly already in upstream — see work order |
-| 4–9 | Car render, widget UI, buttons, refresh, daily use | Not started |
+| 0 | Toolchain and car baseline | Done |
+| 1 | Fork, strip, sign | Done — runs on the iPhone; App Groups sign on a Personal Team |
+| 2 | Live connection to the car | Signed in, status verified; commands not yet run |
+| 3 | Odometer | API matches the dashboard (11,071 mi) |
+| 4 | Car image | Done — Performance Blue, background removed with Vision |
+| 5 | Widget UI | First version: dark glass card, SF Pro, Liquid Glass on Clear home screens |
+| 6–9 | Buttons, refresh, daily use, paid account | Buttons already work; the rest not started |
 
 ## What was removed from BetterBlue, and why
 
@@ -44,6 +46,17 @@ This repo is public. Real Bluelink credentials must never be committed.
 `Secrets.swift` and `Config/Local.xcconfig` are gitignored; `Config/Secrets.example.swift`
 is the template.
 
+## Credits
+
+- App and API layer: [BetterBlue](https://github.com/schmidtwmark/BetterBlue) and
+  [BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) by Mark Schmidt (MIT).
+- Car image: [Hyundai Elantra N CN7 PE 2.0T Performance Blue 01](https://commons.wikimedia.org/wiki/File:Hyundai_Elantra_N_CN7_PE_2.0T_Performance_Blue_01.jpg)
+  by **Ethan Llamas**, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/),
+  via Wikimedia Commons. Changes: background removed with Apple Vision, cropped, resized, rear
+  edge faded (`scripts/cutout-car.swift`, `scripts/make-car-asset.swift`). The adapted image in
+  `Widget/Assets.xcassets/ElantraN.imageset` is shared under the same CC BY-SA 4.0 license.
+
 ## License
 
-MIT. See [LICENSE](LICENSE), which carries both the upstream copyright and this fork's.
+Code: MIT. See [LICENSE](LICENSE), which carries both the upstream copyright and this fork's.
+The car image is CC BY-SA 4.0 (see Credits).
