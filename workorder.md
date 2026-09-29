@@ -161,6 +161,13 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 >
 > Hyundai counts wrong PINs ("Invalid PIN, N attempts remaining"). Run the PIN-failure
 > test once, not repeatedly — exhausting the attempts locks the PIN until it is reset.
+>
+> **Request budget (added 2026-09-29).** Community-documented US limits are ~30 requests a day
+> overall and ~10 per action type, and some users hit them sooner. Each command costs the
+> command plus 1–3 *live* status checks (`BBVehicle.waitForStatusChange`: 10 s wait, then up to
+> 3 checks 10 s apart), and live checks are exactly what Hyundai says it flags. So never burst:
+> the original "5 runs each" latency test would be ~80 requests in one sitting. Spread runs over
+> days and read timings from the logs. Cached reads (`refresh: false`) don't wake the car.
 
 **Tasks**
 
@@ -184,7 +191,7 @@ Record which branch was taken. Phases 6 and 7 depend on it.
 | Lock round trip | Send lock, observe car | Doors lock; app reflects new state on next fetch |
 | Unlock round trip | Send unlock, observe car | Doors unlock |
 | Climate with full options | Temperature + defrost + seat heat + duration | Car starts, cabin conditioning matches request |
-| Command latency | Stopwatch, 5 runs each | Record median and worst case; these numbers set the widget's pending-state timeout in Phase 6 |
+| Command latency | ~~Stopwatch, 5 runs each~~ From the pulled logs, 1–2 runs per command per day over several days | Record median and worst case; these numbers set the widget's pending-state timeout in Phase 6 |
 | Car asleep / poor signal | Park in a garage with weak signal, send command | Error surfaces as a timeout, not a hang |
 | Token expiry | Idle past token lifetime, then send a command | Silent re-auth, or a clean prompt |
 
@@ -521,7 +528,7 @@ Six checks, under two minutes. Catches signing regressions and upstream API brea
 | App Groups will not sign on Personal Team | Unknown | Medium | Gate G1 fallback defined; resolved in Phase 1, not discovered in Phase 6 |
 | Car is Gen5W, not CCNC | Low for a 2025 | Medium | Detected in Phase 2; climate preset degrades to temperature + defrost |
 | Credentials committed to a public fork | Low | **Severe** | Gitignore before first commit; grep git history in Phase 1 |
-| Account suspended for excessive API calls | Low | High | Rate limiter and backoff in Phase 7; soak test before daily use |
+| Account suspended for excessive API calls | Low | High | Rate limiter and backoff in Phase 7; soak test before daily use. Hyundai US's own page says accounts are *flagged* for abnormally high daily "Find My Car" / "Remote Vehicle Status" use and asks owners to disable third-party apps; it names no penalty. Community reports (2024–2026) show daily rate-limit errors and warning emails, no permanent bans found. Keep live refreshes rare. |
 | 12V drain from polling | Low | Medium | Cached-first refresh strategy; 72h parked test in Phase 7 |
 | Widget extension memory kill from large PNG | Medium | Low | Compress in Phase 4; test on device |
 | Weekly re-sign friction kills the project | Medium | Medium | Wireless debugging; Gate G2 exists precisely for this |
