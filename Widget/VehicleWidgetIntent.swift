@@ -754,7 +754,11 @@ struct VehicleQuery: EntityQuery {
     /// vehicles in Settings. Without this, an unconfigured control run
     /// from Spotlight/Control Center just errors with "edit this
     /// control and select a vehicle".
+    ///
+    /// Vehicles from Fake Vehicle Mode accounts come last, so a test account
+    /// left in place never becomes the default over the real car.
     func defaultResult() async -> VehicleEntity? {
-        try? await suggestedEntities().first
+        guard let vehicles = try? await suggestedEntities() else { return nil }
+        return vehicles.first { $0.brand != Brand.fake.displayName } ?? vehicles.first
     }
 }

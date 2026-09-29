@@ -681,3 +681,16 @@ extension BBVehicle: Encodable {
         try container.encode(safeClimatePresets, forKey: .climatePresets)
     }
 }
+
+extension BBVehicle {
+    /// The vehicle a surface shows when nobody picked one: the first visible
+    /// vehicle by sort order, with Fake Vehicle Mode accounts last so a test
+    /// account left in place never takes over the widget from the real car.
+    static func primary(in context: ModelContext) throws -> BBVehicle? {
+        let visible = try context.fetch(FetchDescriptor<BBVehicle>(
+            predicate: #Predicate { !$0.isHidden },
+            sortBy: [SortDescriptor(\.sortOrder)]
+        ))
+        return visible.first { $0.account?.brandEnum != .fake } ?? visible.first
+    }
+}

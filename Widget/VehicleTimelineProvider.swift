@@ -26,14 +26,9 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
             return VehicleWidgetEntry(date: Date(), vehicle: vehicle, configuration: configuration)
         }
 
-        // Try to get the first available vehicle
-        do {
-            let vehicles = try await VehicleQuery().suggestedEntities()
-            let firstVehicle = vehicles.first
-            return VehicleWidgetEntry(date: Date(), vehicle: firstVehicle, configuration: configuration)
-        } catch {
-            return VehicleWidgetEntry(date: Date(), vehicle: nil, configuration: configuration)
-        }
+        // Fall back to the primary vehicle (real accounts before fake ones)
+        let vehicle = await VehicleQuery().defaultResult()
+        return VehicleWidgetEntry(date: Date(), vehicle: vehicle, configuration: configuration)
     }
 
     func timeline(for configuration: VehicleWidgetIntent, in _: Context) async -> Timeline<VehicleWidgetEntry> {
@@ -43,7 +38,7 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
         }
 
         // Try to refresh vehicle data
-        let updatedVehicle = await refreshVehicleData(for: configuration)
+        let updatedVehicle = await Self.loadVehicle(configuration.vehicle)
 
         // Create timeline entries
         var entries: [VehicleWidgetEntry] = []
@@ -66,7 +61,11 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
         return Timeline(entries: entries, policy: .atEnd)
     }
 
-    private func refreshVehicleData(for configuration: VehicleWidgetIntent) async -> VehicleEntity? {
+    /// Loads the widget's vehicle — `configured` if the user picked one, the
+    /// primary vehicle otherwise — refreshing it over HTTP when its cached
+    /// status is stale and falling back to the cache on failure. Shared by
+    /// every home-screen widget so they refresh the same way.
+    static func loadVehicle(_ configured: VehicleEntity?) async -> VehicleEntity? {
         // Hoist the work that doesn't need SwiftData — `preferredUnit`
         // is a UserDefaults read, `allPresets` opens its *own* short-
         // lived container internally. Doing them outside our main
@@ -92,7 +91,7 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
             }
 
             return try await refreshEntity(
-                for: configuration,
+                for: configured,
                 container: modelContainer,
                 unit: unit,
                 allPresets: allPresets
@@ -108,7 +107,7 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
                     HTTPLogSinkManager.shared.configure(with: modelContainer, deviceType: .widget)
                 }
                 return cachedEntity(
-                    for: configuration,
+                    for: configured,
                     container: modelContainer,
                     unit: unit,
                     allPresets: allPresets
@@ -134,15 +133,15 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
     /// the scope as tight as possible — one vehicle per call, explicit
     /// save at the end — minimises the RunningBoard 0xdead10cc risk
     /// when the widget process is yanked mid-fetch.
-    private func refreshEntity(
-        for configuration: VehicleWidgetIntent,
+    private static func refreshEntity(
+        for configured: VehicleEntity?,
         container: ModelContainer,
         unit: Distance.Units,
         allPresets: [ClimatePresetEntity]
     ) async throws -> VehicleEntity? {
         let context = ModelContext(container)
 
-        guard let bbVehicle = fetchTargetVehicle(for: configuration, context: context) else {
+        guard let bbVehicle = fetchTargetVehicle(for: configured, context: context) else {
             BBLogger.info(.app, "Widget: No vehicle found for refresh")
             return nil
         }
@@ -182,36 +181,31 @@ struct VehicleTimelineProvider: AppIntentTimelineProvider {
 
     /// Cached-only path (no HTTP). Same tight-scope pattern as
     /// `refreshEntity` — fetch, build entity, drop context.
-    private func cachedEntity(
-        for configuration: VehicleWidgetIntent,
+    private static func cachedEntity(
+        for configured: VehicleEntity?,
         container: ModelContainer,
         unit: Distance.Units,
         allPresets: [ClimatePresetEntity]
     ) -> VehicleEntity? {
         let context = ModelContext(container)
-        guard let bbVehicle = fetchTargetVehicle(for: configuration, context: context) else {
+        guard let bbVehicle = fetchTargetVehicle(for: configured, context: context) else {
             return nil
         }
         return VehicleEntity(from: bbVehicle, with: unit, allPresets: allPresets)
     }
 
     /// Shared lookup: configured vehicle by VIN if the user picked
-    /// one, otherwise the first non-hidden vehicle by sort order.
-    private func fetchTargetVehicle(
-        for configuration: VehicleWidgetIntent,
+    /// one, otherwise the primary vehicle (`BBVehicle.primary`).
+    private static func fetchTargetVehicle(
+        for configured: VehicleEntity?,
         context: ModelContext
     ) -> BBVehicle? {
         do {
-            if let configVehicle = configuration.vehicle {
+            if let configured {
                 let vehicles = try context.fetch(FetchDescriptor<BBVehicle>())
-                return vehicles.first { $0.vin == configVehicle.vin }
-            } else {
-                let descriptor = FetchDescriptor<BBVehicle>(
-                    predicate: #Predicate { !$0.isHidden },
-                    sortBy: [SortDescriptor(\.sortOrder)]
-                )
-                return try context.fetch(descriptor).first
+                return vehicles.first { $0.vin == configured.vin }
             }
+            return try BBVehicle.primary(in: context)
         } catch {
             BBLogger.error(.app, "Widget: Failed to fetch vehicles from context: \(error)")
             return nil
