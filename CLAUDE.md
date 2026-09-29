@@ -151,9 +151,12 @@ Performance Blue values were measured from the car photo. Check changes in every
 mode: full color draws its own glass background, while Clear/Tinted home screens replace the
 container background with system Liquid Glass and render content in a single tint.
 
-The car image comes from `scripts/cutout-car.swift` (Vision subject lifting) and
-`scripts/make-car-asset.swift` (sizing, rear-edge fade). It is CC BY-SA 4.0 — keep the README
-credit if it is replaced or regenerated.
+The car image comes from `scripts/cutout-car.swift` (Vision subject lifting),
+`scripts/neutralize-car.swift` (studio-style tone) and `scripts/make-car-asset.swift` (sizing;
+`--fade-left` only for photos cropped at the rear). It is CC BY-SA 4.0 — keep the README
+credit if it is replaced or regenerated. Do not use Hyundai, EVOX/KBB or other manufacturer or
+stock renders: they are copyrighted and the repo is public. The car faces left, so the layout
+puts text on the left and the car on the right.
 
 When no vehicle is configured, surfaces use `BBVehicle.primary(in:)` /
 `VehicleQuery.defaultResult()`, which put Fake Vehicle Mode accounts last.

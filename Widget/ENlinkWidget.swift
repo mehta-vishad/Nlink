@@ -76,9 +76,9 @@ struct ENlinkTimelineProvider: AppIntentTimelineProvider {
 // MARK: - Style
 
 enum ENlinkStyle {
-    /// Performance Blue, measured from the car's body panels in the photo.
-    static let paint = Color(red: 0.522, green: 0.655, blue: 0.745)
-    static let paintLight = Color(red: 0.722, green: 0.824, blue: 0.890)
+    /// Performance Blue as it reads on the car image's body panels.
+    static let paint = Color(red: 0.502, green: 0.678, blue: 0.839)
+    static let paintLight = Color(red: 0.702, green: 0.839, blue: 0.949)
     static let night = Color(red: 0.106, green: 0.145, blue: 0.196)
     static let ink = Color(red: 0.027, green: 0.035, blue: 0.055)
     static let unlocked = Color(red: 1.0, green: 0.690, blue: 0.290)
@@ -129,21 +129,21 @@ struct ENlinkBackground: View {
                 Image(ENlinkStyle.carImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: geo.size.width * 0.95, height: geo.size.height * 1.2)
-                    .offset(x: -geo.size.width * 0.12, y: -geo.size.height * 0.05)
-                    .blur(radius: 28)
-                    .opacity(0.55)
+                    .frame(width: geo.size.width * 0.95, height: geo.size.height * 1.3)
+                    .offset(x: geo.size.width * 0.20, y: -geo.size.height * 0.05)
+                    .blur(radius: 30)
+                    .opacity(0.50)
             }
             LinearGradient(
                 stops: [
-                    .init(color: ENlinkStyle.ink.opacity(0.10), location: 0.35),
-                    .init(color: ENlinkStyle.ink.opacity(0.72), location: 0.70)
+                    .init(color: ENlinkStyle.ink.opacity(0.72), location: 0.25),
+                    .init(color: ENlinkStyle.ink.opacity(0.08), location: 0.68)
                 ],
                 startPoint: .leading, endPoint: .trailing
             )
             RadialGradient(
-                colors: [ENlinkStyle.paintLight.opacity(0.30), ENlinkStyle.paint.opacity(0)],
-                center: UnitPoint(x: 0.32, y: 0.98), startRadius: 2, endRadius: 150
+                colors: [ENlinkStyle.paintLight.opacity(0.28), ENlinkStyle.paint.opacity(0)],
+                center: UnitPoint(x: 0.72, y: 1.0), startRadius: 2, endRadius: 150
             )
             LinearGradient(
                 stops: [
@@ -177,14 +177,18 @@ struct ENlinkCard: View {
 
             ZStack(alignment: .topLeading) {
                 ENlinkCar(width: carWidth)
-                    .offset(x: -width * 0.05, y: height - carWidth / ENlinkCar.aspectRatio - 9)
+                    .offset(x: width - carWidth - width * 0.025, y: height - carWidth / ENlinkCar.aspectRatio - 10)
 
                 ENlinkInfoColumn(vehicle: vehicle, now: now)
                     .padding(.top, 14)
                     .padding(.bottom, 12)
-                    .padding(.trailing, 14)
-                    .frame(width: width * 0.43, height: height, alignment: .topLeading)
-                    .offset(x: width * 0.57)
+                    .padding(.leading, 16)
+                    .frame(width: width * 0.47, height: height, alignment: .topLeading)
+
+                ENlinkLockPill(isLocked: vehicle.isLocked)
+                    .padding(.top, 12)
+                    .padding(.trailing, 12)
+                    .frame(width: width, alignment: .topTrailing)
             }
         }
     }
@@ -193,8 +197,8 @@ struct ENlinkCard: View {
 /// The car on a soft floor shadow. Kept in full color in accented mode: the
 /// point of the image is that it matches the real paint.
 struct ENlinkCar: View {
-    static let aspectRatio: CGFloat = 690.0 / 441.0
-    static let widthFraction: CGFloat = 0.58
+    static let aspectRatio: CGFloat = 660.0 / 324.0
+    static let widthFraction: CGFloat = 0.56
     let width: CGFloat
     var opacity: Double = 1
 
@@ -202,9 +206,9 @@ struct ENlinkCar: View {
         ZStack(alignment: .bottom) {
             Ellipse()
                 .fill(.black.opacity(0.65))
-                .frame(width: width * 0.78, height: width * 0.075)
+                .frame(width: width * 0.86, height: width * 0.07)
                 .blur(radius: 7)
-                .offset(x: width * 0.06, y: -width * 0.02)
+                .offset(x: width * 0.02, y: -width * 0.005)
             Image(ENlinkStyle.carImage)
                 .resizable()
                 .interpolation(.high)
@@ -302,7 +306,7 @@ struct ENlinkInfoColumn: View {
         }
     }
 
-    /// Lock state and freshness, or the in-flight command while one is pending.
+    /// Freshness, or the in-flight command while one is pending.
     @ViewBuilder
     private var status: some View {
         HStack(spacing: 4) {
@@ -312,37 +316,19 @@ struct ENlinkInfoColumn: View {
                 Text("\(pending.command) sent \(time(pending.date))")
                     .foregroundStyle(ENlinkStyle.secondaryText)
             } else {
-                lockLabel
-                Text("·").foregroundStyle(ENlinkStyle.tertiaryText)
                 if isStale {
                     Image(systemName: "clock.badge.exclamationmark.fill")
                         .foregroundStyle(ENlinkStyle.unlocked)
                     Text(time(vehicle.timestamp))
                         .foregroundStyle(ENlinkStyle.unlocked)
                 } else {
-                    Text(time(vehicle.timestamp))
+                    Text("Updated \(time(vehicle.timestamp))")
                         .foregroundStyle(ENlinkStyle.tertiaryText)
                 }
             }
         }
         .font(.system(size: 10, weight: .medium))
         .monospacedDigit()
-    }
-
-    @ViewBuilder
-    private var lockLabel: some View {
-        switch vehicle.isLocked {
-        case true?:
-            Label("Locked", systemImage: "lock.fill")
-                .labelStyle(.titleAndIcon)
-                .foregroundStyle(ENlinkStyle.secondaryText)
-        case false?:
-            Label("Unlocked", systemImage: "lock.open.fill")
-                .labelStyle(.titleAndIcon)
-                .foregroundStyle(ENlinkStyle.unlocked)
-        case nil:
-            Text("Lock unknown").foregroundStyle(ENlinkStyle.tertiaryText)
-        }
     }
 
     private var isStale: Bool {
@@ -362,6 +348,35 @@ struct ENlinkInfoColumn: View {
         Calendar.current.isDate(date, inSameDayAs: now)
             ? date.formatted(date: .omitted, time: .shortened)
             : date.formatted(.dateTime.month(.abbreviated).day())
+    }
+}
+
+/// Lock state as a small glass capsule in the card's top-right corner.
+struct ENlinkLockPill: View {
+    let isLocked: Bool?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: isLocked == false ? "lock.open.fill" : "lock.fill")
+                .font(.system(size: 9, weight: .bold))
+            Text(isLocked == nil ? "Unknown" : isLocked == true ? "Locked" : "Unlocked")
+                .font(.system(size: 11, weight: .semibold))
+        }
+        .foregroundStyle(isLocked == false ? ENlinkStyle.unlocked : ENlinkStyle.primaryText)
+        .widgetAccentable(isLocked == false)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(.white.opacity(0.12)))
+        .overlay {
+            Capsule().strokeBorder(
+                LinearGradient(
+                    colors: [.white.opacity(0.50), .white.opacity(0.06), .white.opacity(0.22)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                lineWidth: 0.75
+            )
+        }
+        .accessibilityLabel(isLocked == nil ? "Lock state unknown" : isLocked == true ? "Locked" : "Unlocked")
     }
 }
 
@@ -500,7 +515,8 @@ struct ENlinkEmptyCard: View {
             ZStack(alignment: .topLeading) {
                 let carWidth = geo.size.width * ENlinkCar.widthFraction
                 ENlinkCar(width: carWidth, opacity: 0.35)
-                    .offset(x: -geo.size.width * 0.05, y: geo.size.height - carWidth / ENlinkCar.aspectRatio - 9)
+                    .offset(x: geo.size.width - carWidth - geo.size.width * 0.025,
+                            y: geo.size.height - carWidth / ENlinkCar.aspectRatio - 10)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Elantra N")
                         .font(.system(size: 11, weight: .semibold))
@@ -516,9 +532,8 @@ struct ENlinkEmptyCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 14)
-                .padding(.trailing, 14)
-                .frame(width: geo.size.width * 0.43, alignment: .topLeading)
-                .offset(x: geo.size.width * 0.57)
+                .padding(.leading, 16)
+                .frame(width: geo.size.width * 0.47, alignment: .topLeading)
             }
         }
     }

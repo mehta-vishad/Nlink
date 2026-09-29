@@ -50,10 +50,11 @@ is the template.
 
 - App and API layer: [BetterBlue](https://github.com/schmidtwmark/BetterBlue) and
   [BetterBlueKit](https://github.com/schmidtwmark/BetterBlueKit) by Mark Schmidt (MIT).
-- Car image: [Hyundai Elantra N CN7 PE 2.0T Performance Blue 01](https://commons.wikimedia.org/wiki/File:Hyundai_Elantra_N_CN7_PE_2.0T_Performance_Blue_01.jpg)
-  by **Ethan Llamas**, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/),
-  via Wikimedia Commons. Changes: background removed with Apple Vision, cropped, resized, rear
-  edge faded (`scripts/cutout-car.swift`, `scripts/make-car-asset.swift`). The adapted image in
+- Car image: [2025 Hyundai Elantra N, front left, 03-29-2026](https://commons.wikimedia.org/wiki/File:2025_Hyundai_Elantra_N,_front_left,_03-29-2026.jpg)
+  by **MercurySable99**, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/),
+  via Wikimedia Commons. Changes: background removed with Apple Vision, highlights and
+  reflections toned down, cropped, resized (`scripts/cutout-car.swift`,
+  `scripts/neutralize-car.swift`, `scripts/make-car-asset.swift`). The adapted image in
   `Widget/Assets.xcassets/ElantraN.imageset` is shared under the same CC BY-SA 4.0 license.
 
 ## License

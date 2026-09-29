@@ -257,11 +257,17 @@ BetterBlueKit's status model covers battery, EV range, fuel level, gas range, lo
 
 **Blocked on:** paint color.
 
-> **Done (2026-09-28).** Neither source option was used. Instead: a CC BY-SA 4.0 photo of a
-> Performance Blue Elantra N (CN7 PE — same body as the 2025) from Wikimedia Commons, lifted off
-> its background with Apple Vision (`scripts/cutout-car.swift`), sized for the slot with the
-> cropped rear edge faded (`scripts/make-car-asset.swift`). Credited in the README. The license
-> allows it in the public repo, which a Hyundai render would not. 690×441 @3x, ~1.2 MB decoded.
+> **Done (2026-09-29).** Neither source option was used. Instead: a CC BY-SA 4.0 overcast-light
+> photo of a 2025 Elantra N in Performance Blue from Wikimedia Commons, lifted off its background
+> with Apple Vision (`scripts/cutout-car.swift`), toned toward a studio look
+> (`scripts/neutralize-car.swift`) and sized for the slot (`scripts/make-car-asset.swift`).
+> Credited in the README; the license allows it in the public repo and even commercially.
+> 660×324 @3x, under 1 MB decoded.
+>
+> Rejected on licensing: Hyundai's own transparent renders, EVOX/KBB studio renders (watermarked,
+> commercially licensed), and branded 3D models (sold "editorial use only"). Any realistic image
+> of the car carries Hyundai's design and trademark rights; the clean path to a studio-style
+> image of *this* car is the owner's own photo run through the same pipeline.
 > Checked: edges clean on dark, full color on Clear/Tinted home screens. Still to check on the
 > phone: color vs. the real car in daylight, 3x sharpness, no memory kills.
 
